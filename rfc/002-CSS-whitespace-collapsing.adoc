@@ -1,0 +1,542 @@
+:hide-uri-scheme:
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
+:author: Jules Sam. Randolph
+:revnumber: 1.0.0-draft.0
+:toc: left
+
+= CSS Whitespace Collapsing
+
+|===
+|*{author} ― v{revnumber}*
+|===
+
+== Problem Frame
+
+The problem addressed in this document relates to the implementation of CSS
+whitespace rendering requirements in a React tree. The full requirements are
+exposed in W3C's https://www.w3.org/TR/css-text-3/[CSS Text Module Level 3],
+and more precisely chapters 3 and 4.
+
+This document aims at a subset of these requirements. The following scope
+limitations should apply:
+
+* Only the behavior for CSS `white-space: normal;` rule is of interest.
+Alternative values such as `pre-line`, `break-spaces`, and others will not be
+addressed.
+* Only LTR (Left to Right) layouts will be considered (no bidi reordering).
+* Only horizontal text layouts will be considered.
+* Ruby annotations will not be considered.
+
+From now on, this subset of white-space rendering requirements will be referred to as the
+_limited whitespace collapsing requirements_.
+
+____
+The problem can be defined as follows:
+
+* Adapt the limited whitespace collapsing requirements to React Native Render HTML library.
+* Define a transient structure to facilitate such implementation.
+____
+
+== Data Flow
+
+A new structure is offered, the transient render tree, to formalize and
+enhance the preexisting implementation. This structure is detailed in <<transient-render-tree>>.
+
+The below flow is proposed to account for the new whitespace collapsing requirements:
+
+. *Parsing*: the HTML is parsed into a document tree.
+. *Render Tree Generation*: a transient render tree is build to account
+for React-Native constrains and prepare a structure to be rendered in a React
+tree.
+.. *Translating*: each document node is translated to a transient node (see
+<<translate-tree>> algorithm).
+.. *Transforming*: the transient tree is mutated.
+... *Hoisting*: the tree is reordered to account for transient node constrains,
+which are derived from React Native constrains (see <<hoist-tree>> algorithm).
+... *Collapsing*: the transient render tree is walked over in order to collapse
+  white spaces according to the limited whitespace collapsing requirements (see
+  <<collapse-tree>> algorithm).
+. *Rendering*: the transient render tree is transformed into a React tree.
+
+
+[[transient-render-tree]]
+== Transient Render Tree Data Structure
+
+A transient render tree is equal to its root <<tnode>> (transient node).
+This intermediary structure offers multiple advantages:
+
+- Easy style inheritance;
+- Easing of whitespace collapsing implementation;
+- Comprehensive rendering logic.
+
+[[tnode]]
+=== TNode
+
+A transient node is a node from a transient render tree.
+
+``` ts
+interface TNode {
+    type: 'block' | 'phrasing' | 'text' | 'empty';
+    attributes: Record<string, string>;
+    parent: TNode | null;
+    children: TNode[];
+    isAnchor: boolean;
+    isCollapsibleLeft: boolean;
+    isCollapsibleRight: boolean;
+}
+```
+
+[[tblock]]
+=== TBlock
+
+A transient block node represents block content. 
+
+Constrains:: its children must be any list of <<tphrasing>>, <<tblock>> or
+<<tempty>> nodes.
+Rendering::
+It will generally be rendered as a React Native `<View />`, but could be
+rendered as anything using custom renderers.
+Notes::
+A transient block node can be anonymous when no corresponding tag name is
+specified.
+
+```ts
+interface TBlock extends TNode {
+    type: 'block';
+    tagName?: string;
+    isCollapsibleLeft: false;
+    isCollapsibleRight: false;
+}
+```
+
+[[tphrasing]]
+=== TPhrasing
+
+A transient phrasing node represents a mix of transient text and phrasing
+nodes.
+
+Constrains:: its children must be any list of <<ttext>>, <<tphrasing>> or
+<<tempty>> nodes.
+Rendering::
+It will be rendered as a React Native `<Text />` node, and thus creates
+an inline formatting context for its children.
+Notes::
+A transient phrasing node can be anonymous when no corresponding tag name is
+specified.
+
+```ts
+interface TPhrasing extends TNode {
+    type: 'phrasing';
+    tagName?: string;
+}
+```
+
+[[ttext]]
+=== TText
+
+Constrains:: must not have children.
+Rendering::
+A transient text node represents raw text, optionally its surrounding tag.
+
+```ts
+interface TText extends TNode {
+    type: 'text';
+    tagName?: string;
+    data: string;
+}
+```
+
+[[tphrasinganchor]]
+=== TPhrasingAnchor
+
+Constrains:: inherits from <<tphrasing>>.
+Rendering::
+Phrasing anchors will be rendered as React Native `<Text/>` nodes with
+`onPress` prop.
+
+```ts
+interface TPhrasingAnchor extends TPhrasing {
+    isAnchor: true;
+    href: string
+}
+```
+
+[[tblockanchor]]
+=== TBlockAnchor
+
+Constrains:: inherits from <<tblock>>.
+Rendering::
+At render time, block renderers will receive `onPressAnchor` and `isAnchor` props.
+
+```ts
+interface TBlockAnchor extends TBlock {
+    isAnchor: true;
+    href: string
+}
+```
+
+[[tempty]]
+=== TEmpty
+
+Constrains:: none.
+Rendering::
+Empty nodes are never rendered.
+Notes::
+Some empty nodes are generated during render tree transforming to indicate that
+a specific node should not be rendered. Examples of tags which translate to empty nodes:
+. script
+. link
+
+```ts
+interface TEmpty extends TBlock {
+  type: 'empty';
+  tagName?: string;
+}
+```
+
+== Translate Algorithms
+
+=== Definitions
+
+[[text-phrasing-el]] text phrasing element:: Any of the elements presented in
+https://html.spec.whatwg.org/multipage/text-level-semantics.html[HTML Standard, Ch. 4.5,
+Text-level semantics] or
+https://html.spec.whatwg.org/multipage/edits.html[HTML Standard, Ch. 4.7,
+Edits].
+[[embedded-el]] embedded element:: Any of the elements presented in
+https://html.spec.whatwg.org/multipage/embedded-content.html[HTML Standard, Ch. 4.8,
+Embedded content].
+[[sectioning-el]] sectioning element:: Any of the elements presented in
+https://html.spec.whatwg.org/multipage/sections.html[HTML Standard, Ch. 4.3,
+Sections].
+[[tabular-el]] tabular element:: Any of the elements presented in
+https://html.spec.whatwg.org/multipage/tables.html[HTML Standard, Ch. 4.9,
+Tabular data].
+[[grouping-el]] grouping element:: Any of the elements presented in
+https://html.spec.whatwg.org/multipage/grouping-content.html[HTML Standard, Ch. 4.4,
+Grouping content].
+[[interactive-el]] interactive element:: Any of the elements presented in
+https://html.spec.whatwg.org/multipage/interactive-elements.html[HTML Standard, Ch. 4.12,
+Interactive elements] or https://html.spec.whatwg.org/multipage/forms.html[HTML Standard, Ch. 4.10,
+Forms].
+[[untranslatable-el]] untranslatable element:: Any of the elements presented in
+https://html.spec.whatwg.org/multipage/scripting.html[HTML Standard,
+Ch. 4.11, Scripting] or https://html.spec.whatwg.org/multipage/semantics.html[HTML Standard,
+Ch. 4.2, Document metadata].
+
+[[translate-tree]]
+=== Translate Tree
+
+. *Let* _body_ be the body of the document tree
+. *Return* the result of applying <<translate-node>> to _body_
+
+[[translate-node]]
+=== Translate Node
+
+[IMPORTANT]
+Interactive content is not supported and will be translated to <<tempty>> nodes.
+
+Given _node_ a document node:
+
+. *If* _node_ is a Text node
+.. *Let* _tnode_ be a <<ttext>>
+.. *Let* _tnode.data_ be _node.data_
+.. *Return* _tnode_
+. *Else if* _node_ is an anchor element
+... *Let* _tnode_ be a <<tphrasinganchor>>
+... *Set* _tnode.attributes_ to _node.attributes_
+... *Set* _tnode.href_ to _node.href_
+... *Set* _tnode.children_ to the mapping of each of _node.children_ to the
+    result of <<translate-node>>
+. *Else if* _node_ is a <<text-phrasing-el>>
+.. *If* _node.children_ has length 0
+... *Let* _tnode_ be a <<ttext>>
+... *Set* _tnode.data_ to the empty string
+... *Set* _tnode.tagName to _node.tagName_
+... *Set* _tnode.attributes to _node.attributes_
+... *Return* _tnode_
+.. *Else if* _node.children_ has length 1 and its child is a text node
+... *Let* _tnode_ be a <<ttext>>
+... *Set* _tnode.data_ be _node.children[0].data_
+... *Set* _tnode.tagName to _node.tagName_
+... *Set* _tnode.attributes to _node.attributes_
+... *Return* _tnode_
+.. *Else*
+... *Let* _tnode_ be a <<tphrasing>>
+... *Set* _tnode.tagName to _node.tagName_
+... *Set* _tnode.attributes to _node.attributes_
+... *Set* _tnode.children_ to the mapping of each of _node.children_ to the
+    result of <<translate-node>>
+.. *End if*
+. *Else if* _node_ is an <<embedded-el>>, <<sectioning-el>>, <<grouping-el>> or <<tabular-el>>, 
+... *Let* _tnode_ be a <<tblock>>
+... *Set* _tnode.tagName to _node.tagName_
+... *Set* _tnode.attributes to _node.attributes_
+... *Set* _tnode.children_ to the mapping of each of _node.children_ to <<translate-node>>
+. *Else* +
+_(node is an <<interactive-el>> or <<untranslatable-el>>. Notice that its
+children won't be copied)_
+.. *Let* _tnode_ be a <<tempty>>
+.. *Set* _tnode.tagName to _node.tagName_
+.. *Set* _tnode.attributes to _node.attributes_
+.. *Return* _tnode_
+. *End if*
+
+== Hoist Algorithms
+
+[[hoist-tree]]
+=== Hoist Tree
+
+. *Let* _troot_ be the root of the transient render tree
+. *Return* the result of applying <<hoist-node>> to _troot_
+
+[[hoist-node]]
+=== Hoist Node
+
+[IMPORTANT]
+when _tnode_ is a <<tphrasinganchor>> node, the algorithm will group text with
+<<tphrasinganchor>> and replace <<tblock>> with their corresponding <<tblockanchor>>.
+
+[NOTE]
+<<tempty>> nodes are ignored in the bellow algorithm.
+
+Given _tnode_ a <<tnode>>:
+
+. *If* _tnode_ is a <<tphrasing>> node
+.. *For each* _cnode_ from _tnode.children_
+... *If* _cnode_ is a <<tblock>> node
+.... *Let* _newnode_ be a <<tblock>> node
+.... *Copy* every attribute of _tnode_ to _newnode_
+.... *Return* the result of applying <<group-text>> to _(newnode, tnode)_
+... *End if*
+.. *Done*
+. *End if*
+. *Return* _tnode_
+
+[[group-text]]
+=== Group Text
+
+[NOTE]
+<<tempty>> nodes are ignored in the bellow algorithm.
+
+Given _tnode_ a <<tnode>> and _wrappernode_ a <<tphrasing>> node:
+
+. *Let* _newlist_ be an empty list of <<tnode,TNodes>>.
+. *Let* _wrapper_ be a copy of _wrappernode_
+. *For each* _cnode_ of _tnode.children_
+.. *Let* _newchild_ be the result of applying <<hoist-node>> to _cnode_
+.. *If* _newchild_ is a <<ttext>> *or* _newchild_ is a <<tphrasing>>
+... *Push* _newchild_ to _wrapper.children_
+.. *Else*
+... *Push* _wrapper_ to _newlist_
+... *Let* _wrapper_ be a copy of _wrappernode_
+... *If* _wrappernode_ is a <<tphrasinganchor>> node
+.... *Let* _nextchild_ be a <<tblockanchor>> node
+.... *Copy* _newchild_ into _nextchild_
+.... *Set* _nextchild.href_ to _wrappernode.href_
+.... *Push* _nextchild_ to _newlist_
+... *Else*
+.... *Push* _newchild_ to _newlist_
+... *End if*
+.. *End if*
+. *Done*
+. *If* _wrapper.children_ is not empty
+... *Push* _wrapper_ to _newlist_
+. *End if*
+. *Return* _newlist_
+
+== Collapse Algorithms
+
+=== Definitions
+
+[[inter-element-whitespace]] inter-element whitespace::
+ASCII whitespace is always allowed between elements. User agents represent these characters between elements in the source markup as Text nodes in the DOM. Empty Text nodes and Text nodes consisting of just sequences of those characters are considered inter-element whitespace.
+Source:
+https://html.spec.whatwg.org/multipage//dom.html#inter-element-whitespace[HTML
+living standard, Ch. 3.2, Elements].
+[[collapsible]] collapsible:: A collapsible whitespace (tabular, space...) is a
+character which, in certain contexts depending on the
+https://www.w3.org/TR/2020/WD-css-text-3-20200429/#white-space-property[white-space
+CSS property], should be removed before paint when preceded by another
+whitespace.
+[[segment-break]] segment break:: For CSS processing, each document
+language–defined segment break and each line feed (U+000A) in the text is
+treated as a segment break. See
+https://www.w3.org/TR/2020/WD-css-text-3-20200429/#segment-break[CSS Text
+Module Level 3, Ch. 4]
+[[space-discarding-set]] space discarding character set:: Any character from
+the Space-Discarding Unicode Characters list. See https://www.w3.org/TR/css-text-3/#space-discard-set[CSS Text
+Module Level 3, Appendix F]
+
+[[collapse-tree]]
+=== Collapse Tree
+
+. *Let* _root_ be the root node of the transient render tree
+. *Apply* <<collapse-node>> to _root_
+
+[[collapse-node]]
+=== Collapse Node
+
+Given _node_ a transient node:
+
+. *If* _node_ is a <<ttext>> node, apply <<collapse-text>> to _node_
+. *Else if* _node_ is a <<tphrasing>> node, apply <<collapse-phrasing>> to _node_
+. *Else* apply <<collapse-block>> to _node_
+. *Endif*
+
+
+[[collapse-block]]
+=== Collapse Block
+
+Given _node_ a <<tblock>> node:
+
+. *For each* _child_ from _node.children_, do:
+.. *If* _child_ is an <<inter-element-whitespace>>, remove _child_
+.. *Else* apply <<collapse-node>> to _child_
+.. *Endif*
+. *Done*
+
+
+[[collapse-phrasing]]
+=== Collapse Phrasing
+
+Given _node_ a <<tphrasing>> node:
+
+[arabic]
+. *For each* _child_ from _node.children_, do:
+.. *If* _child_ is an <<inter-element-whitespace>>,
+... *Replace* _child_ with a one space character <<ttext>> node
+... *Set* _child.isCollapsibleLeft_ to _true_
+.. *Else if* _child_ is a Text node, apply <<collapse-text>> to _child_
+.. *Else* apply <<collapse-phrasing>> to _child_
+. *Done*
+. *For each* pair index (_i_, _k_) of consecutive items of _node.children_, do:
+.. *If* _child[i].isCollapsibleRight_ and _child[k].isCollapsibleLeft_, remove the
+first space from the first child node of _child[k]_ (if the first child is a
+<<tphrasing>> node, recursively walk over its own children until the first
+<<ttext>> node is found).
+.. *End if*
+. *Done*
+
+[[collapse-text]]
+=== Collapse Text
+
+Given _node_ a <<ttext>> node:
+
+[arabic]
+. *Let* _collapsedData_ be _node.data_
+. *Do*: remove sequences of <<collpasible>>, spaces and
+tabs immediately preceding or
+following a <<segment-break>> *on* _collapsedData_
+. *Do*: remove any <<collpasible>> <<segment-break>> immediately following another
+<<collpasible>> <<segment-break>> *on* _collapsedData_
+. *For each* remaining <<segment-break>> in _collapsedData_:
+.. *If* the character immediately before or immediately after the <<segment-break>>
+is the zero-width space character, remove the <<segment-break>>
+.. *Else if* both the character before and after the <<segment-break>> belong to
+the <<space-discarding-set>>, remove the <<segment-break>>
+.. *Else* replace the <<segment-break>> with a space
+. *Done*
+. *Do*: replace any <<collapsible>> tab with a space *on* _collapsedData_
+. *Do*: delete any <<collapsible>> space following another <<collapsible>> space *on* _collapsedData_
+. *If* _collapsedData_ starts with a <<collapsible>> space, set
+_node.isCollapsibleLeft_ to _true_
+. *Else if* _collapsedData_ ends with a <<collapsible>> space, set
+_node.isCollapsibleRight_ to _true_
+. *End if*
+. *Let* _node.data_ be _collapsedData_
+
+== Example
+
+In the below example, the transient render tree state will be laid out in xml.
+The laid structure strictly represents data structure presented in
+<<transient-render-tree>>, however the `attributes` and default fields will be omitted.
+
+=== Source
+
+[source,html]
+----
+<a href="https://domain.com">
+This is
+<span>phrasing content</span>
+<img src="https://domain.com/logo.jpg" />
+    and this is <strong>too</strong>.
+</a>
+----
+
+=== Translating
+
+The document tree is walked over to generate an initial transient render tree:
+
+.After Translating
+[source,xml]
+----
+<TPhrasingAnchor href="https://domain.com">
+  <TText>\nThis is\n<TText/>
+  <TText tagName="span">phrasing content</TText>
+  <TText>\n</TText>
+  <TBlock tagName="img"/>
+  <TText>\n    and this is </TText>
+  <TText tagName="strong">too</TText>
+  <TText>.</TText>
+</TPhrasingAnchor>
+----
+
+See <<translate-tree>> algorithm.
+
+=== Hoisting
+
+Hoisting is applied to enforce transient node constrains:
+
+.After Hoisting
+[source,xml]
+----
+<TBlock>
+  <TPhrasingAnchor href="https://domain.com">
+    <TText>\nThis is\n<TText/>
+    <TText tagName="span">phrasing content</TText>
+    <TText>\n</TText>
+  <TPhrasingAnchor>
+  <TBlockAnchor href="https://domain.com" tagName="img"/>
+  <TPhrasingAnchor href="https://domain.com">
+    <TText>\n    and this is </TText>
+    <TText tagName="strong">too</TText>
+    <TText>.</TText>
+  </TPhrasingAnchor>
+</TBlock>
+----
+
+Remarks:: <<tphrasinganchor>> nodes must inherit attributes from the previous
+<<tphrasinganchor>> node, with the exception of CSS styles which will be
+transferred to the parent <<tblock>> node.
+
+See <<hoist-tree>> algorithm.
+
+=== Collapsing
+
+Collapsing is applied to enforce limited whitespace collapsing requirements:
+
+.After Collapsing
+[source,xml]
+----
+<TBlock>
+  <TPhrasingAnchor href="https://domain.com">
+    <TText>This is <TText/>
+    <TText tagName="span">phrasing content</TText>
+  <TPhrasingAnchor>
+  <TBlockAnchor href="https://domain.com" tagName="img"/>
+  <TPhrasingAnchor href="https://domain.com">
+    <TText>and this is </TText>
+    <TText tagName="strong">too</TText>
+    <TText>.</TText>
+  </TPhrasingAnchor>
+</TBlock>
+----
+
+See <<collapse-tree>> algorithm.
