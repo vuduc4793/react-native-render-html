@@ -7,7 +7,7 @@ ifdef::env-github[]
 :warning-caption: :warning:
 endif::[]
 :author: Jules Sam. Randolph
-:revnumber: 1.0.0-draft.4
+:revnumber: 1.0.0-draft.5
 :toc: left
 
 = CSS Whitespace Collapsing
@@ -110,7 +110,7 @@ A transient block node represents block content.
 Constrains:: Its children must be any list of <<tphrasing>>, <<tblock>> or
 <<tempty>> nodes.
 Rendering::
-It will generally be rendered as a React Native `<View />`, but could be
+It will generally be rendered as a React Native _collapsedChildren_<View />`, but could be
 rendered as anything using custom renderers.
 Notes::
 A transient block node can be anonymous when no corresponding tag name is
@@ -415,7 +415,7 @@ Given _node_ a transient node:
 .. *Return* the result of applying <<collapse-phrasing>> to _node_
 . *Else if* _node_ is a <<tblock>> node
 .. *Return* the result of applying applying <<collapse-block>> to _node_
-. *Endif*
+. *End if*
 . *Return* _node_
 
 [[collapse-block]]
@@ -424,7 +424,8 @@ Given _node_ a transient node:
 Given _node_ a <<tblock>> node:
 
 . *Let* _newChildren_ be an empty <<tnode>> array.
-. *For each* _child_ of _node.children_, do:
+. *For each* index _i_ of _node.children_, do:
+.. *Let* _child_ be the result of applying <<collapse-node>> to _node.children[i]_
 .. *If* *not* _child.isWhitespace()_ +
    _(child is not an <<inter-element-whitespace>>)_
 ... *If* _child.isCollapsibleLeft()_
@@ -432,8 +433,10 @@ Given _node_ a <<tblock>> node:
 ... *Else if* _child.isCollapsibleRight()_
 .... *Do* _child.trimRight()_
 ... *End if*
-... *Push* the result of applying <<collapse-node>> to _child_ in _node.children_
-.. *Endif*
+... *If not* _child.isEmpty()_
+.... *Push* _child_ in _newChildren_
+... *End if*
+.. *End if*
 . *Done*
 . *Set* _child.children_ to _newChildren_
 . *Return* _node_
@@ -444,19 +447,27 @@ Given _node_ a <<tblock>> node:
 Given _node_ a <<tphrasing>> node:
 
 [arabic]
-. *Let* _newChildren_ be an empty list of <<tnode>>
-. *For each* _child_ of _node.children_, do:
+. *Let* _collapsedChildren_ be an empty list of <<tnode>>
+. *Let* _trimmedChildren_ be an empty list of <<tnode>>
+. *For each* index _i_ of _node.children_, do:
+.. *Let* _child_ be the result of applying <<collapse-node>> to _node.children[i]_
 .. *If* _child_ is a <<ttext>>
-... *Push* the result of applying <<collapse-text>> to _child_ to _newChildren_
+... *Push* _child_ to _collapsedChildren_
 .. *Else if* _child_ is a <<tphrasing>>
-... *Push* the result of applying <<collapse-phrasing>> to _child_ to _newChildren_
+... *Push* _child_ to _collapsedChildren_
 . *Done*
-. *Set* _node.children_ to _newChildren_
-. *For each* pair index (_i_, _k_) of consecutive items in _node.children_, do:
+. *For each* pair index (_i_, _k_) of consecutive items in _collapsedChildren_, do:
 .. *If* _child[i].isCollapsibleRight()_ and _child[k].isCollapsibleLeft()_
 ... *Do* _child[i].trimRight()_
+... *If* *not* _child[i].isEmpty()_
+.... *Push* _child[i]_ to _trimmedChildren_
+... *End if*
+.. *Else*
+... *Push* _child[i]_ to _trimmedChildren_
 .. *End if*
 . *Done*
+. *Push* the last element of _node.children_ to _trimmedChildren_
+. *Set* _node.children_ to _trimmedChildren_
 . *Return* _node_
 
 [[collapse-text]]
