@@ -7,7 +7,7 @@ ifdef::env-github[]
 :warning-caption: :warning:
 endif::[]
 :author: Jules Sam. Randolph
-:revnumber: 1.0.0-draft.2
+:revnumber: 1.0.0-draft.3
 :toc: left
 
 = CSS Whitespace Collapsing
@@ -84,20 +84,30 @@ A transient node is a node from a transient render tree.
 interface TNode {
     type: 'block' | 'phrasing' | 'text' | 'empty';
     attributes: Record<string, string>;
-    parent: TNode | null;
     children: TNode[];
     isAnchor: boolean;
-    isCollapsibleLeft: boolean;
-    isCollapsibleRight: boolean;
+    isCollapsibleLeft(): boolean;
+    isCollapsibleRight(): boolean;
+    isWhitespace(): boolean;
+    trimLeft(): void;
+    trimRight(): void;
+    getFirstChild(): TNode | null;
+    getLastChild(): TNode | null;
 }
 ```
+
+isCollapsibleLeft():: Default implementation returns `false`.
+isCollapsibleRight():: Default implementation returns `false`.
+isWhitespace():: Default implementation returns `false`.
+trimLeft():: Default implementation does nothing.
+trimRight():: Default implementation does nothing.
 
 [[tblock]]
 === TBlock
 
 A transient block node represents block content. 
 
-Constrains:: its children must be any list of <<tphrasing>>, <<tblock>> or
+Constrains:: Its children must be any list of <<tphrasing>>, <<tblock>> or
 <<tempty>> nodes.
 Rendering::
 It will generally be rendered as a React Native `<View />`, but could be
@@ -110,8 +120,6 @@ specified.
 interface TBlock extends TNode {
     type: 'block';
     tagName?: string;
-    isCollapsibleLeft: false;
-    isCollapsibleRight: false;
 }
 ```
 
@@ -121,7 +129,7 @@ interface TBlock extends TNode {
 A transient phrasing node represents a mix of transient text and phrasing
 nodes.
 
-Constrains:: its children must be any list of <<ttext>>, <<tphrasing>> or
+Constrains:: Its children must be any list of <<ttext>>, <<tphrasing>> or
 <<tempty>> nodes.
 Rendering::
 It will be rendered as a React Native `<Text />` node, and thus creates
@@ -137,10 +145,17 @@ interface TPhrasing extends TNode {
 }
 ```
 
+isCollapsibleLeft():: Returns the result of _firstChild.isCollapsibleLeft()_.
+isCollapsibleRight():: Returns the result of _lastChild.isCollapsibleRight()_.
+isWhitespace():: Return _true_ if for every _child_ of _children_,
+_child.isWhitespace()_ is _true_.
+trimLeft():: Invokes _firstChild.trimLeft_.
+trimRight():: Invokes _lastChild.trimRight_.
+
 [[ttext]]
 === TText
 
-Constrains:: must not have children.
+Constrains:: Must not have children.
 Rendering::
 A transient text node represents raw text, optionally its surrounding tag.
 
@@ -151,6 +166,14 @@ interface TText extends TNode {
     data: string;
 }
 ```
+
+isCollapsibleLeft():: Returns _true_ if the first character of _data_ is a space character.
+isCollapsibleRight():: Returns _true_ if the last character of _data_ is a
+space character.
+isWhitespace():: Returns _true_ if _data_ has length 1 and the first character of _data_ is a space
+character.
+trimLeft():: Replace _data_ with the substring starting at index 1.
+trimRight():: Replace _data_ with the substring ending at the penultimate index.
 
 [[tphrasinganchor]]
 === TPhrasingAnchor
@@ -386,23 +409,34 @@ Module Level 3, Appendix F]
 
 Given _node_ a transient node:
 
-. *If* _node_ is a <<ttext>> node, apply <<collapse-text>> to _node_
-. *Else if* _node_ is a <<tphrasing>> node, apply <<collapse-phrasing>> to _node_
-. *Else* apply <<collapse-block>> to _node_
+. *If* _node_ is a <<ttext>> node
+.. *Return* the result of applying <<collapse-text>> to _node_
+. *Else if* _node_ is a <<tphrasing>> node
+.. *Return* the result of applying <<collapse-phrasing>> to _node_
+. *Else if* _node_ is a <<tblock>> node
+.. *Return* the result of applying applying <<collapse-block>> to _node_
 . *Endif*
-
+. *Return* _node_
 
 [[collapse-block]]
 === Collapse Block
 
 Given _node_ a <<tblock>> node:
 
-. *For each* _child_ from _node.children_, do:
-.. *If* _child_ is an <<inter-element-whitespace>>, remove _child_
-.. *Else* apply <<collapse-node>> to _child_
+. *Let* _newChildren_ be an empty <<tnode>> array.
+. *For each* _child_ of _node.children_, do:
+.. *If* *not* _child.isWhitespace()_ +
+   _(child is not an <<inter-element-whitespace>>)_
+... *If* _child.isCollapsibleLeft()_
+.... *Do* _child.trimLeft()_
+... *Else if* _child.isCollapsibleRight()_
+.... *Do* _child.trimRight()_
+... *End if*
+... *Push* the result of applying <<collapse-node>> to _child_ in _node.children_
 .. *Endif*
 . *Done*
-
+. *Set* _child.children_ to _newChildren_
+. *Return* _node_
 
 [[collapse-phrasing]]
 === Collapse Phrasing
@@ -410,20 +444,20 @@ Given _node_ a <<tblock>> node:
 Given _node_ a <<tphrasing>> node:
 
 [arabic]
-. *For each* _child_ from _node.children_, do:
-.. *If* _child_ is an <<inter-element-whitespace>>,
-... *Replace* _child_ with a one space character <<ttext>> node
-... *Set* _child.isCollapsibleLeft_ to _true_
-.. *Else if* _child_ is a Text node, apply <<collapse-text>> to _child_
-.. *Else* apply <<collapse-phrasing>> to _child_
+. *Let* _newChildren_ be an empty list of <<tnode>>
+. *For each* _child_ of _node.children_, do:
+.. *If* _child_ is a <<ttext>>
+... *Push* the result of applying <<collapse-text>> to _child_ to _newChildren_
+.. *Else if* _child_ is a <<tphrasing>>
+... *Push* the result of applying <<collapse-phrasing>> to _child_ to _newChildren_
 . *Done*
-. *For each* pair index (_i_, _k_) of consecutive items of _node.children_, do:
-.. *If* _child[i].isCollapsibleRight_ and _child[k].isCollapsibleLeft_, remove the
-first space from the first child node of _child[k]_ (if the first child is a
-<<tphrasing>> node, recursively walk over its own children until the first
-<<ttext>> node is found).
+. *Set* _node.children_ to _newChildren_
+. *For each* pair index (_i_, _k_) of consecutive items in _node.children_, do:
+.. *If* _child[i].isCollapsibleRight()_ and _child[k].isCollapsibleLeft()_
+... *Do* _child[i].trimRight()_
 .. *End if*
 . *Done*
+. *Return* _node_
 
 [[collapse-text]]
 === Collapse Text
@@ -452,6 +486,7 @@ _node.isCollapsibleLeft_ to _true_
 _node.isCollapsibleRight_ to _true_
 . *End if*
 . *Let* _node.data_ be _collapsedData_
+. *Return* _node_
 
 == Example
 
