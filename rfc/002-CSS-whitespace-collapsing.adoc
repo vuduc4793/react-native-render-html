@@ -7,7 +7,7 @@ ifdef::env-github[]
 :warning-caption: :warning:
 endif::[]
 :author: Jules Sam. Randolph
-:revnumber: 1.0.0-draft.5
+:revnumber: 1.0.0-draft.6
 :toc: left
 
 = CSS Whitespace Collapsing
@@ -96,11 +96,11 @@ interface TNode {
 }
 ```
 
-isCollapsibleLeft():: Default implementation returns `false`.
-isCollapsibleRight():: Default implementation returns `false`.
+isCollapsibleLeft():: Returns the result of _firstChild.isCollapsibleLeft()_.
+isCollapsibleRight():: Returns the result of _lastChild.isCollapsibleRight()_.
 isWhitespace():: Default implementation returns `false`.
-trimLeft():: Default implementation does nothing.
-trimRight():: Default implementation does nothing.
+trimLeft():: Invokes _firstChild.trimLeft_, and remove this child if empty.
+trimRight():: Invokes _lastChild.trimRight_, and remove this child if empty.
 
 [[tblock]]
 === TBlock
@@ -145,12 +145,8 @@ interface TPhrasing extends TNode {
 }
 ```
 
-isCollapsibleLeft():: Returns the result of _firstChild.isCollapsibleLeft()_.
-isCollapsibleRight():: Returns the result of _lastChild.isCollapsibleRight()_.
 isWhitespace():: Return _true_ if for every _child_ of _children_,
 _child.isWhitespace()_ is _true_.
-trimLeft():: Invokes _firstChild.trimLeft_, and remove this child if empty.
-trimRight():: Invokes _lastChild.trimRight_, and remove this child if empty.
 
 [[ttext]]
 === TText
