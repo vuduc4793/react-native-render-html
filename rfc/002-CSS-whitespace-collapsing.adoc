@@ -325,31 +325,32 @@ Given _tnode_ a <<tnode>>:
 [NOTE]
 <<tempty>> nodes are ignored in the bellow algorithm.
 
-Given _tnode_ a <<tnode>> and _wrappernode_ a <<tphrasing>> node:
+Given _tnode_ a <<tblock>> and _wrappernode_ a <<tphrasing>> node:
 
-. *Let* _newlist_ be an empty list of <<tnode,TNodes>>.
+. *Let* _newchildren_ be an empty list of <<tnode,TNodes>>.
 . *Let* _wrapper_ be a copy of _wrappernode_
 . *For each* _cnode_ of _tnode.children_
 .. *Let* _newchild_ be the result of applying <<hoist-node>> to _cnode_
 .. *If* _newchild_ is a <<ttext>> *or* _newchild_ is a <<tphrasing>>
 ... *Push* _newchild_ to _wrapper.children_
 .. *Else*
-... *Push* _wrapper_ to _newlist_
+... *Push* _wrapper_ to _newchildren_
 ... *Let* _wrapper_ be a copy of _wrappernode_
 ... *If* _wrappernode_ is a <<tphrasinganchor>> node
 .... *Let* _nextchild_ be a <<tblockanchor>> node
 .... *Copy* _newchild_ into _nextchild_
 .... *Set* _nextchild.href_ to _wrappernode.href_
-.... *Push* _nextchild_ to _newlist_
+.... *Push* _nextchild_ to _newchildren_
 ... *Else*
-.... *Push* _newchild_ to _newlist_
+.... *Push* _newchild_ to _newchildren_
 ... *End if*
 .. *End if*
 . *Done*
 . *If* _wrapper.children_ is not empty
-... *Push* _wrapper_ to _newlist_
+... *Push* _wrapper_ to _newchildren_
 . *End if*
-. *Return* _newlist_
+. *Set* _tnode.children_ to _newchildren_
+. *Return* _tnode_
 
 == Collapse Algorithms
 
