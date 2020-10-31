@@ -7,7 +7,7 @@ ifdef::env-github[]
 :warning-caption: :warning:
 endif::[]
 :author: Jules Sam. Randolph
-:revnumber: 1.0.0-draft.3
+:revnumber: 1.0.0-draft.4
 :toc: left
 
 = CSS Whitespace Collapsing
@@ -480,11 +480,6 @@ the <<space-discarding-set>>, remove the <<segment-break>>
 . *Done*
 . *Do*: replace any <<collapsible>> tab with a space *on* _collapsedData_
 . *Do*: delete any <<collapsible>> space following another <<collapsible>> space *on* _collapsedData_
-. *If* _collapsedData_ starts with a <<collapsible>> space, set
-_node.isCollapsibleLeft_ to _true_
-. *Else if* _collapsedData_ ends with a <<collapsible>> space, set
-_node.isCollapsibleRight_ to _true_
-. *End if*
 . *Let* _node.data_ be _collapsedData_
 . *Return* _node_
 
