@@ -7,7 +7,7 @@ ifdef::env-github[]
 :warning-caption: :warning:
 endif::[]
 :author: Jules Sam. Randolph
-:revnumber: 1.0.0-draft.1
+:revnumber: 1.0.0-draft.2
 :toc: left
 
 = CSS Whitespace Collapsing
@@ -432,11 +432,11 @@ Given _node_ a <<ttext>> node:
 
 [arabic]
 . *Let* _collapsedData_ be _node.data_
-. *Do*: remove sequences of <<collpasible>>, spaces and
+. *Do*: remove sequences of <<collapsible>>, spaces and
 tabs immediately preceding or
 following a <<segment-break>> *on* _collapsedData_
-. *Do*: remove any <<collpasible>> <<segment-break>> immediately following another
-<<collpasible>> <<segment-break>> *on* _collapsedData_
+. *Do*: remove any <<collapsible>> <<segment-break>> immediately following another
+<<collapsible>> <<segment-break>> *on* _collapsedData_
 . *For each* remaining <<segment-break>> in _collapsedData_:
 .. *If* the character immediately before or immediately after the <<segment-break>>
 is the zero-width space character, remove the <<segment-break>>
