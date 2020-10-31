@@ -7,7 +7,7 @@ ifdef::env-github[]
 :warning-caption: :warning:
 endif::[]
 :author: Jules Sam. Randolph
-:revnumber: 1.0.0-draft.0
+:revnumber: 1.0.0-draft.1
 :toc: left
 
 = CSS Whitespace Collapsing
@@ -484,7 +484,7 @@ The document tree is walked over to generate an initial transient render tree:
   <TBlock tagName="img"/>
   <TText>\n    and this is </TText>
   <TText tagName="strong">too</TText>
-  <TText>.</TText>
+  <TText>.\n</TText>
 </TPhrasingAnchor>
 ----
 
@@ -507,7 +507,7 @@ Hoisting is applied to enforce transient node constrains:
   <TPhrasingAnchor href="https://domain.com">
     <TText>\n    and this is </TText>
     <TText tagName="strong">too</TText>
-    <TText>.</TText>
+    <TText>.\n</TText>
   </TPhrasingAnchor>
 </TBlock>
 ----
