@@ -149,8 +149,8 @@ isCollapsibleLeft():: Returns the result of _firstChild.isCollapsibleLeft()_.
 isCollapsibleRight():: Returns the result of _lastChild.isCollapsibleRight()_.
 isWhitespace():: Return _true_ if for every _child_ of _children_,
 _child.isWhitespace()_ is _true_.
-trimLeft():: Invokes _firstChild.trimLeft_.
-trimRight():: Invokes _lastChild.trimRight_.
+trimLeft():: Invokes _firstChild.trimLeft_, and remove this child if empty.
+trimRight():: Invokes _lastChild.trimRight_, and remove this child if empty.
 
 [[ttext]]
 === TText
