@@ -7,7 +7,7 @@ ifdef::env-github[]
 :warning-caption: :warning:
 endif::[]
 :author: Jules Sam. Randolph
-:revnumber: 1.0.0-draft.9
+:revnumber: 1.0.0-draft.10
 :toc: left
 
 = CSS Whitespace Collapsing
@@ -332,6 +332,7 @@ when _tnode_ is a <<tphrasinganchor>> node, the algorithm will group text with
 
 Given _tnode_ a <<tnode>>:
 
+. *Set* _tnode.children_ to the mapping of <<hoist-node>>
 . *If* _tnode_ is a <<tphrasing>> node
 .. *For each* _cnode_ from _tnode.children_
 ... *If* _cnode_ is a <<tblock>> node
@@ -357,7 +358,9 @@ Given _tnode_ a <<tnode>>:
 Given _tnode_ a <<tblock>> and _wrappernode_ a <<tphrasing>> node:
 
 . *Let* _newchildren_ be an empty list of <<tnode,TNodes>>.
-. *Let* _wrapper_ be a copy of _wrappernode_
+. _(a marker copy is a new instance of the same class, in which only the attribute 'href' is
+copied if present)_
+. *Let* _wrapper_ be a marker copy of _wrappernode_
 . *For each* _cnode_ of _tnode.children_
 .. *Let* _newchild_ be the result of applying <<hoist-node>> to _cnode_
 .. *If* _newchild_ is a <<ttext>> *or* _newchild_ is a <<tphrasing>>
