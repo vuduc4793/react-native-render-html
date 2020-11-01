@@ -7,7 +7,7 @@ ifdef::env-github[]
 :warning-caption: :warning:
 endif::[]
 :author: Jules Sam. Randolph
-:revnumber: 1.0.0-draft.7
+:revnumber: 1.0.0-draft.8
 :toc: left
 
 = CSS Whitespace Collapsing
@@ -402,8 +402,16 @@ Module Level 3, Appendix F]
 [[collapse-tree]]
 === Collapse Tree
 
-. *Let* _root_ be the root node of the transient render tree
-. *Apply* <<collapse-node>> to _root_
+Given _root_ the root node of the transient render tree:
+
+. *Let* _croot_ be the result of applying <<collapse-node>> to _root_
+. *If* _croot.isCollapsibleLeft()_:
+.. *Invoke* _root.trimLeft()_
+. *End if*
+. *If* _croot.isCollapsibleRight()_:
+.. *Invoke* _root.trimRight()_
+. *End if*
+. *Return* _croot_
 
 [[collapse-node]]
 === Collapse Node
