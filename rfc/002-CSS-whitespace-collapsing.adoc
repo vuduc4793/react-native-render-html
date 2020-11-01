@@ -7,7 +7,7 @@ ifdef::env-github[]
 :warning-caption: :warning:
 endif::[]
 :author: Jules Sam. Randolph
-:revnumber: 1.0.0-draft.6
+:revnumber: 1.0.0-draft.7
 :toc: left
 
 = CSS Whitespace Collapsing
@@ -89,6 +89,7 @@ interface TNode {
     isCollapsibleLeft(): boolean;
     isCollapsibleRight(): boolean;
     isWhitespace(): boolean;
+    isEmpty(): boolean;
     trimLeft(): void;
     trimRight(): void;
     getFirstChild(): TNode | null;
@@ -99,6 +100,7 @@ interface TNode {
 isCollapsibleLeft():: Returns the result of _firstChild.isCollapsibleLeft()_.
 isCollapsibleRight():: Returns the result of _lastChild.isCollapsibleRight()_.
 isWhitespace():: Default implementation returns `false`.
+isEmpty():: Default implementation returns `false`.
 trimLeft():: Invokes _firstChild.trimLeft_, and remove this child if empty.
 trimRight():: Invokes _lastChild.trimRight_, and remove this child if empty.
 
@@ -145,6 +147,8 @@ interface TPhrasing extends TNode {
 }
 ```
 
+isEmpty():: Returns _true_ if for every _child_ of_children_, _child.isEmpty()_
+is _true_.
 isWhitespace():: Return _true_ if for every _child_ of _children_,
 _child.isWhitespace()_ is _true_.
 
@@ -168,6 +172,7 @@ isCollapsibleRight():: Returns _true_ if the last character of _data_ is a
 space character.
 isWhitespace():: Returns _true_ if _data_ has length 1 and the first character of _data_ is a space
 character.
+isEmpty():: Returns _true_ if _data_ has length 0.
 trimLeft():: Replace _data_ with the substring starting at index 1.
 trimRight():: Replace _data_ with the substring ending at the penultimate index.
 
