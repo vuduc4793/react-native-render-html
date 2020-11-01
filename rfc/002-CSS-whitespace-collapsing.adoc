@@ -7,7 +7,7 @@ ifdef::env-github[]
 :warning-caption: :warning:
 endif::[]
 :author: Jules Sam. Randolph
-:revnumber: 1.0.0-draft.8
+:revnumber: 1.0.0-draft.9
 :toc: left
 
 = CSS Whitespace Collapsing
@@ -340,6 +340,11 @@ Given _tnode_ a <<tnode>>:
 .... *Return* the result of applying <<group-text>> to _(newnode, tnode)_
 ... *End if*
 .. *Done*
+. *Else if* _tnode_ is a <<tblock>> node
+.. *If* _tnode_ has children
+... *Let* _wrapper_ be a <<tphrasing>>
+... *Return* the result of applying <<group-text>> to _(tnode, wrapper)_
+.. *End if*
 . *End if*
 . *Return* _tnode_
 
