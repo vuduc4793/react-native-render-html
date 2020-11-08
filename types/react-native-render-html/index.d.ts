@@ -12,7 +12,8 @@ declare module "react-native-render-html" {
     RecursiveArray,
     Falsy,
     TextStyle,
-    ViewStyle
+    ViewStyle,
+    ImageStyle,
   } from "react-native";
   namespace HTML {
     interface BaseNode {
@@ -220,6 +221,7 @@ declare module "react-native-render-html" {
        * Prints the parsing result from htmlparser2 and render-html after the initial render
        */
       debug?: boolean;
+      imageStyle?: StyleProp<ImageStyle>;
     }
   }
   class HTML<P> extends Component<HTML.ContainerProps<P>> {}
