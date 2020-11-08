@@ -1,5 +1,5 @@
 import React, { PureComponent } from "react";
-import { Image, View, Text, StyleSheet } from "react-native";
+import { Image, View, Text, StyleSheet, Dimensions } from "react-native";
 import PropTypes from "prop-types";
 
 const defaultImageStyle = { resizeMode: "cover" };
@@ -234,6 +234,24 @@ export default class HTMLImage extends PureComponent {
       width: PropTypes.number,
       height: PropTypes.number,
     }),
+    imageStyle: PropTypes.shape({
+      width: PropTypes.number,
+      height: PropTypes.number,
+      resizeMode: PropTypes.string,
+      backfaceVisibility: PropTypes.string,
+      borderBottomLeftRadius: PropTypes.number,
+      borderBottomRightRadius: PropTypes.number,
+      backgroundColor: PropTypes.string,
+      borderColor: PropTypes.string,
+      borderWidth: PropTypes.number,
+      borderRadius: PropTypes.number,
+      borderTopLeftRadius: PropTypes.number,
+      borderTopRightRadius: PropTypes.number,
+      overflow: PropTypes.string,
+      overlayColor: PropTypes.string,
+      tintColor: PropTypes.string,
+      opacity: PropTypes.number,
+    })
   };
 
   static defaultProps = {
@@ -353,11 +371,11 @@ export default class HTMLImage extends PureComponent {
   }
 
   renderImage(imageBoxDimensions) {
-    const { source, style } = this.props;
+    const { source, style, imageStyle } = this.props;
     return (
       <Image
         source={source}
-        style={[defaultImageStyle, style, imageBoxDimensions]}
+        style={[defaultImageStyle, style, imageBoxDimensions, imageStyle]}
         testID="image-layout"
       />
     );
@@ -369,8 +387,8 @@ export default class HTMLImage extends PureComponent {
         {this.props.alt ? (
           <Text style={styles.errorText}>{this.props.alt}</Text>
         ) : (
-          false
-        )}
+            false
+          )}
       </View>
     );
   }
