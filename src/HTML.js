@@ -15,6 +15,7 @@ import {
 import { generateDefaultBlockStyles, generateDefaultTextStyles } from './HTMLDefaultStyles';
 import { DomHandler, Parser } from 'htmlparser2';
 import * as HTMLRenderers from './HTMLRenderers';
+import { fontSizer, responsiveH, responsiveW } from 'react-native-render-html/src/Dimentions';
 
 export default class HTML extends PureComponent {
     static propTypes = {
@@ -469,11 +470,11 @@ export default class HTML extends PureComponent {
             }
 
             const classStyles = _getElementClassStyles(attribs, classesStyles);
-
+            const furiColor = tagsStyles.p.color ? tagsStyles.p.color : "#000"
             const textElement = data ?
                 parentTag === "ruby" && data ? (
-                    <View style={{}}>
-                        {parent && parent.children && parent.children.map((item, index) => item.name === "rt" && <Text key={index} style={styles.furiFontStyle}>{item.children[0].data}</Text>)}
+                    <View style={{ alignItems: "center"}}>
+                        {parent && parent.children && parent.children.map((item, index) => item.name === "rt" && <Text key={index} style={[styles.furiFontStyle, {color: furiColor}]}>{item.children[0].data}</Text>)}
                         {parentTag === "rp" || parentTag === "rt" ? <Text /> : (
                             <Text
                                 allowFontScaling={allowFontScaling}
@@ -488,19 +489,19 @@ export default class HTML extends PureComponent {
                                         ptSize,
                                         ignoredStyles,
                                         allowedStyles
-                                    }), { marginBottom: -3 }]}
+                                    }), { marginBottom: responsiveH(-2), paddingHorizontal: 0 }]}
                             >
-                                {data}
+                                {data && data}
                             </Text>
                         )}
                     </View>)
                     :
                     (<>
-                        <Text key={index} style={styles.furiFontStyle}>{" "}</Text>
+                        <Text key={index} style={styles.furiFontStyle}>{""}</Text>
                         {parentTag === "rp" || parentTag === "rt" ? <Text /> : (
                             <Text
                                 allowFontScaling={allowFontScaling}
-                                style={computeTextStyles(
+                                style={[computeTextStyles(
                                     element,
                                     {
                                         defaultTextStyles: this.defaultTextStyles,
@@ -511,9 +512,9 @@ export default class HTML extends PureComponent {
                                         ptSize,
                                         ignoredStyles,
                                         allowedStyles
-                                    })}
+                                    }), { marginBottom: responsiveH(-2), paddingHorizontal: 0 }]}
                             >
-                                {data}
+                                {data && data}
                             </Text>
                         )}
                     </>)
@@ -528,7 +529,7 @@ export default class HTML extends PureComponent {
             ]
                 .filter((s) => s !== undefined);
             return (
-                <Wrapper key={key} style={[style]} {...renderersProps}>
+                <Wrapper key={key} style={[style, {paddingHorizontal: 0}]} {...renderersProps}>
                     {textElement}
                     {childElements}
                 </Wrapper>
@@ -569,8 +570,8 @@ export default class HTML extends PureComponent {
 
 const styles = StyleSheet.create({
     furiFontStyle: {
-        fontSize: 10,
-        marginRight: -100,
-        marginBottom: -10
+        fontSize: fontSizer(9),
+        // marginRight: responsiveW(-100),
+        marginBottom: responsiveH(-8),
     }
 })
