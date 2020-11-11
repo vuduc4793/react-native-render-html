@@ -19,6 +19,9 @@ function getImgProps(passProps) {
     enableExperimentalPercentWidth,
     contentWidth,
     imageStyle,
+    resizeMode,
+    imageWidth,
+    imageHeight,
   } = passProps;
   return {
     computeImagesMaxWidth,
@@ -26,6 +29,9 @@ function getImgProps(passProps) {
     enableExperimentalPercentWidth,
     contentWidth,
     imageStyle,
+    resizeMode,
+    imageWidth,
+    imageHeight
   };
 }
 

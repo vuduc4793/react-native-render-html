@@ -222,9 +222,12 @@ declare module "react-native-render-html" {
        */
       debug?: boolean;
       imageStyle?: StyleProp<ImageStyle>;
+      resizeMode?: string
+      imageWidth?: number
+      imageHeight?: number
     }
   }
-  class HTML<P> extends Component<HTML.ContainerProps<P>> {}
+  class HTML<P> extends Component<HTML.ContainerProps<P>> { }
   export = HTML;
 }
 

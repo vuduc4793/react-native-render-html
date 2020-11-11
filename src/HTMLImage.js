@@ -1,7 +1,6 @@
 import React, { PureComponent } from "react";
 import { Image, View, Text, StyleSheet, Dimensions } from "react-native";
 import PropTypes from "prop-types";
-
 const defaultImageStyle = { resizeMode: "cover" };
 const emptyObject = {};
 
@@ -20,6 +19,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignSelf: "stretch",
     justifyContent: "center",
+    
   },
 });
 
@@ -371,12 +371,15 @@ export default class HTMLImage extends PureComponent {
   }
 
   renderImage(imageBoxDimensions) {
-    const { source, style, imageStyle } = this.props;
+    const { source, style, imageStyle, imageWidth, imageHeight, resizeMode, } = this.props;
     return (
       <Image
         source={source}
         style={[defaultImageStyle, style, imageBoxDimensions, imageStyle]}
         testID="image-layout"
+        height={imageHeight}
+        width={imageWidth}
+        resizeMode={resizeMode || "contain"}
       />
     );
   }
