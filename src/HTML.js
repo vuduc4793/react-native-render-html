@@ -474,7 +474,7 @@ export default class HTML extends PureComponent {
             const textElement = data ?
                 parentTag === "ruby" && data ? (
                     <View style={{ alignItems: "center"}}>
-                        {parent && parent.children && parent.children.map((item, index) => item.name === "rt" && <Text key={index} style={[styles.furiFontStyle, {color: furiColor}]}>{item.children[0].data}</Text>)}
+                        {parent && parent.children && parent.children.map((item, index) => item.name === "rt" && item.children[0] && <Text key={index} style={[styles.furiFontStyle, {color: furiColor}]}>{item.children[0].data.replace(/[ ]/g, "")}</Text>)}
                         {parentTag === "rp" || parentTag === "rt" ? <Text /> : (
                             <Text
                                 allowFontScaling={allowFontScaling}
