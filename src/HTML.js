@@ -93,9 +93,15 @@ export default class HTML extends PureComponent {
         this.mounted = false;
     }
 
+
     componentDidUpdate(prevProps, prevState) {
-        const { html, uri, renderers, tagsStyles, classesStyles } = prevProps;
-        let doParseDOM = false;
+        const { html, uri, renderers, tagsStyles, classesStyles, contentWidth, staticContentMaxWidth, computeImagesMaxWidth } = prevProps;
+        let shouldParseDOM = tagsStyles !== this.props.tagsStyles ||
+            classesStyles !== this.props.classesStyles ||
+            contentWidth !== this.props.contentWidth ||
+            staticContentMaxWidth !== this.props.staticContentMaxWidth ||
+            computeImagesMaxWidth !== this.props.computeImagesMaxWidth ||
+            this.state.dom !== prevState.dom;
 
         this.generateDefaultStyles(this.props.baseFontStyle);
         if (renderers !== this.props.renderers) {
@@ -105,11 +111,7 @@ export default class HTML extends PureComponent {
             // If the source changed, register the new HTML and parse it
             this.registerDOM(this.props);
         }
-        if (tagsStyles !== this.props.tagsStyles || classesStyles !== this.props.classesStyles) {
-            // If the tagsStyles changed, render again
-            this.parseDOM(this.state.dom, this.props);
-        }
-        if (this.state.dom !== prevState.dom) {
+        if (shouldParseDOM) {
             this.parseDOM(this.state.dom, this.props);
         }
     }
@@ -313,7 +315,7 @@ export default class HTML extends PureComponent {
                 } else if (this.renderers[name] && this.renderers[name].wrapper) {
                     wrapper = this.renderers[name].wrapper;
                 } else if (BLOCK_TAGS.indexOf(name.toLowerCase()) !== -1) {
-                    wrapper = "Text";
+                    wrapper = "View";
                 } else if (TEXT_TAGS.indexOf(name.toLowerCase()) !== -1 || MIXED_TAGS.indexOf(name.toLowerCase()) !== -1) {
                     wrapper = "Text";
                 }
@@ -473,8 +475,8 @@ export default class HTML extends PureComponent {
             const furiColor = tagsStyles.p.color ? tagsStyles.p.color : "#000"
             const textElement = data ?
                 parentTag === "ruby" && data ? (
-                    <View style={{ alignItems: "center"}}>
-                        {parent && parent.children && parent.children.map((item, index) => item.name === "rt" && item.children[0] && <Text key={index} style={[styles.furiFontStyle, {color: furiColor}]}>{item.children[0].data.replace(/[ ]/g, "")}</Text>)}
+                    <View style={{ alignItems: "center" }}>
+                        {parent && parent.children && parent.children.map((item, index) => item.name === "rt" && item.children[0] && <Text key={index} style={[styles.furiFontStyle, { color: furiColor }]}>{item.children[0].data.replace(/[ ]/g, "")}</Text>)}
                         {parentTag === "rp" || parentTag === "rt" ? <Text /> : (
                             <Text
                                 allowFontScaling={allowFontScaling}
@@ -529,7 +531,7 @@ export default class HTML extends PureComponent {
             ]
                 .filter((s) => s !== undefined);
             return (
-                <Wrapper key={key} style={[style, {paddingHorizontal: 0}]} {...renderersProps}>
+                <Wrapper key={key} style={[style, { paddingHorizontal: 0, flexDirection: "row", flexWrap: "wrap", alignItems: "flex-end" }]} {...renderersProps}>
                     {textElement}
                     {childElements}
                 </Wrapper>
