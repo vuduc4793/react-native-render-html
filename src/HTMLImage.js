@@ -19,7 +19,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignSelf: "stretch",
     justifyContent: "center",
-    
   },
 });
 

@@ -9,12 +9,12 @@ export const TextOnlyPropTypes = TextStylePropTypes.filter((prop) => ViewStylePr
 
 // These tags should ALWAYS be mapped to View wrappers
 export const BLOCK_TAGS = ['address', 'article', 'aside', 'footer', 'hgroup', 'nav', 'section', 'blockquote', 'dd',
-    'dl', 'dt', 'figure', 'hr', 'li', 'main', 'ol', 'ul', 'cite', 'data', 'rp', 'rtc', 'ruby', 'area',
+    'dl', 'dt', 'figure', 'hr', 'li', 'main', 'ol', 'ul', 'cite', 'data', 'rtc', 'area',
     'img', 'map', 'center'];
 
 // These tags should ALWAYS be mapped to Text wrappers
 export const TEXT_TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'figcaption', 'p', 'pre', 'abbr', 'b', 'bdi', 'bdo', 'code',
-    'dfn', 'i', 'kbd', 'mark', 'q', 'rt', 's', 'samp', 'small', 'big', 'span', 'strong', 'sub', 'sup', 'time', 'u', 'var', 'wbr',
+    'dfn', 'i', 'kbd', 'mark', 'q', 'ruby', 'rp', 'rt', 's', 'samp', 'small', 'big', 'span', 'strong', 'sub', 'sup', 'time', 'u', 'var', 'wbr',
     'del', 'ins', 'blink', 'font', 'em', 'bold', 'br', 'acronym'];
 
 // Text in these tags should not be stripped from line breaks
@@ -70,7 +70,7 @@ export const stylePropTypes = {
  * @param {any} tags you don't need to supply this yourself
  * @returns {array}
  */
-export function getParentsTagsRecursively (parent, tags = []) {
+export function getParentsTagsRecursively(parent, tags = []) {
     if (!parent) {
         return tags;
     }
@@ -89,7 +89,7 @@ export function getParentsTagsRecursively (parent, tags = []) {
  * @param {string} tag
  * @returns {HTMLNode?}
  */
-export function getClosestNodeParentByTag (node, tag) {
+export function getClosestNodeParentByTag(node, tag) {
     if (!node || !node.parent) {
         return undefined;
     }
